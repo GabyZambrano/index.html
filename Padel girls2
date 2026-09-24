@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#d946ef">
+<title>Pádel Girls</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(145deg,#fff1f8,#f4efff);color:#33233d}.app{max-width:760px;margin:auto;padding:16px 13px 42px}.brand{text-align:center;padding:8px 0 15px}.logo{font-size:40px}.brand h1{margin:2px 0;font-size:30px;color:#b83280}.brand p{margin:0;color:#7b657f}.nav{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px}.nav button{background:#fff;color:#8b3a9b;border:1px solid #e4d5ef}.nav button.active{background:#d946ef;color:#fff}button,input,select{font:inherit;min-height:46px;border-radius:14px;border:1px solid #dfcce5;padding:10px 12px}button{background:#d946ef;color:white;border:0;font-weight:700}button.secondary{background:#f3e8ff;color:#8b3a9b}.card,.court{background:#fff;border:1px solid #ead8ee;border-radius:20px;padding:15px;margin:11px 0;box-shadow:0 7px 22px #8f5a9612}.grid{display:grid;gap:9px}.two{grid-template-columns:1fr 1fr}.hidden{display:none}.pill{padding:4px 8px;border-radius:99px;background:#f5e8ff;color:#8b3a9b;font-size:12px}.court{margin:0;background:#fffafd}.courts{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:11px}.player{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid #f0e5f2}.small{min-height:37px;padding:7px 10px;font-size:13px}.danger{background:#fff0f3;color:#b4234f;border:1px solid #f3c8d5}.winner{background:#ffe2f2;border:1px solid #efb5d3;color:#9d286d;font-weight:700}.winner.selected{background:#d946ef;color:#fff}.note{font-size:12px;color:#806b86;line-height:1.4}table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:10px 6px;border-bottom:1px solid #eee}.champ{text-align:center;padding:22px;border-radius:20px;background:linear-gradient(135deg,#ffe1f1,#eee2ff)}.champ strong{display:block;font-size:28px;color:#b83280;margin-top:8px}.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#3c2944;color:white;padding:10px 16px;border-radius:999px;display:none;z-index:5}@media(max-width:520px){.two{grid-template-columns:1fr}.nav{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="brand"><div class="logo">🎾💗</div><h1>Pádel Girls</h1><p>Organiza tu torneo de forma fácil.</p></div>
+<div class="nav">
+<button class="active" data-tab="torneo">🏆 Torneo</button><button data-tab="jugadoras">👩 Jugadoras</button><button data-tab="canchas">🎾 Canchas</button><button data-tab="tabla">📊 Tabla</button>
+</div>
+
+<section id="torneo" class="tab">
+<div class="card"><h2>✨ Datos del torneo</h2><div class="grid two"><input id="tName" placeholder="Nombre del torneo"><input id="date" type="date"></div><div class="grid two" style="margin-top:9px"><input id="numCourts" type="number" min="1" max="20" placeholder="Número de canchas"><button id="saveTournament">Guardar cambios</button></div></div>
+<div class="card"><h2>📋 Resumen</h2><div id="summary"></div></div>
+<div class="card"><h2>📖 Cómo usarla</h2><p class="note">1. Agrega las jugadoras. 2. Entra a Canchas. 3. Elige hasta 4 jugadoras por cancha. 4. Toca la ganadora. 5. La tabla se actualiza sola.</p></div>
+</section>
+
+<section id="jugadoras" class="tab hidden">
+<div class="card"><h2>👩 Agregar jugadora</h2><div class="grid two"><input id="newPlayer" placeholder="Nombre de la jugadora"><button id="addPlayer">Agregar</button></div></div>
+<div class="card"><h2>💗 Participantes <span id="count" class="pill"></span></h2><div id="players"></div></div>
+</section>
+
+<section id="canchas" class="tab hidden">
+<div class="card"><h2>🎾 Resultados</h2><p class="note">Cada cancha representa un partido. Una ganadora suma 3 puntos; las demás 0.</p><div id="courts" class="courts"></div></div>
+</section>
+
+<section id="tabla" class="tab hidden">
+<div class="card"><h2>🏆 Tabla de posiciones</h2><div style="overflow:auto"><table><thead><tr><th>#</th><th>Jugadora</th><th>PJ</th><th>PG</th><th>PP</th><th>Pts</th></tr></thead><tbody id="standings"></tbody></table></div></div>
+<div id="champion" class="champ">🥇 Lidera la tabla<strong>---</strong></div>
+</section>
+</div><div id="toast" class="toast"></div>
+
+<script>
+const KEY="padelGirls_v3";
+const initial={name:"Pádel Girls",date:new Date().toISOString().slice(0,10),courts:4,players:[],matches:[]};
+let S=initial;
+try{const saved=JSON.parse(localStorage.getItem(KEY));if(saved&&typeof saved==="object")S={...initial,...saved}}catch(e){}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+function persist(){localStorage.setItem(KEY,JSON.stringify(S))}
+function toast(msg){$("toast").textContent=msg;$("toast").style.display="block";setTimeout(()=>$("toast").style.display="none",1600)}
+function stats(){
+ const out={};S.players.forEach(name=>out[name]={name,pj:0,pg:0,pp:0,pts:0});
+ S.matches.forEach(m=>{
+  if(!m||!Array.isArray(m.names)||m.winner==null)return;
+  const used=m.names.filter(Boolean);
+  used.forEach((name,i)=>{if(!out[name])out[name]={name,pj:0,pg:0,pp:0,pts:0};out[name].pj++;if(i===m.winner){out[name].pg++;out[name].pts+=3}else out[name].pp++})
+ });
+ return Object.values(out).sort((a,b)=>b.pts-a.pts||b.pg-a.pg||a.pp-b.pp||a.name.localeCompare(b.name));
+}
+function render(){
+ $("tName").value=S.name;$("date").value=S.date;$("numCourts").value=S.courts;
+ $("count").textContent=S.players.length;
+ $("players").innerHTML=S.players.length?S.players.map((p,i)=>`<div class="player"><span>👩 ${esc(p)}</span><button class="danger small" data-del="${i}">Eliminar</button></div>`).join(""):'<p class="note">Agrega las participantes para comenzar.</p>';
+ $("players").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const name=S.players[+b.dataset.del];S.players.splice(+b.dataset.del,1);S.matches.forEach(m=>{if(m) m.names=m.names.map(x=>x===name?"":x);});persist();render();toast("Jugadora eliminada")});
+ renderCourts();
+ const rows=stats();
+ $("standings").innerHTML=rows.length?rows.map((r,i)=>`<tr><td><b>${i+1}</b></td><td>${esc(r.name)}</td><td>${r.pj}</td><td>${r.pg}</td><td>${r.pp}</td><td><b>${r.pts}</b></td></tr>`).join(""):'<tr><td colspan="6" style="text-align:center">Agrega jugadoras y registra resultados.</td></tr>';
+ const top=rows.find(r=>r.pj>0);$("champion").innerHTML=top?`🥇 Lidera la tabla<strong>👑 ${esc(top.name)}</strong><div class="note">${top.pts} puntos · ${top.pg} victoria(s)</div>`:'🥇 Lidera la tabla<strong>---</strong>';
+ const played=S.matches.filter(m=>m&&m.winner!=null).length;
+ $("summary").innerHTML=`<b>${esc(S.name)}</b><br>${S.date||"Sin fecha"} · ${S.courts} cancha(s) · ${S.players.length} jugadora(s) · ${played} resultado(s) registrado(s)`;
+}
+function renderCourts(){
+ let html="";
+ for(let c=0;c<S.courts;c++){
+  const m=S.matches[c]||{names:["","","",""],winner:null};const names=[0,1,2,3].map(j=>m.names?.[j]||"");
+  html+=`<div class="court"><h3 style="margin:0 0 9px">🎾 Cancha ${c+1}</h3>${[0,1,2,3].map(j=>`<select class="pselect" data-c="${c}" data-j="${j}"><option value="">Jugadora ${j+1}</option>${S.players.map(p=>`<option value="${esc(p)}" ${names[j]===p?"selected":""}>${esc(p)}</option>`).join("")}</select>`).join("<div style='height:7px'></div>")}<div style="height:9px"></div><select class="winnerSelect" data-c="${c}"><option value="">🏆 Selecciona la ganadora</option>${names.map((p,j)=>p?`<option value="${esc(p)}" ${m.winner===j?"selected":""}>👑 ${esc(p)}</option>`:"").join("")}</select></div>`;
+ }
+ $("courts").innerHTML=html;
+ document.querySelectorAll(".pselect").forEach(el=>el.onchange=()=>{const c=+el.dataset.c,j=+el.dataset.j;S.matches[c]??={names:["","","",""],winner:null};S.matches[c].names[j]=el.value;S.matches[c].winner=null;persist();render();toast("Cancha actualizada")});
+ document.querySelectorAll(".winnerSelect").forEach(el=>el.onchange=()=>{const c=+el.dataset.c;const m=S.matches[c]||{names:["","","",""],winner:null};m.winner=m.names.indexOf(el.value);S.matches[c]=m;persist();render();toast("🏆 Ganadora registrada")});
+}
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".tab").forEach(x=>x.classList.add("hidden"));$(b.dataset.tab).classList.remove("hidden")});
+$("addPlayer").onclick=()=>{const p=$("newPlayer").value.trim();if(!p){toast("Escribe un nombre");return}if(S.players.some(x=>x.toLowerCase()===p.toLowerCase())){toast("Esa jugadora ya existe");return}S.players.push(p);$("newPlayer").value="";persist();render();toast("💗 Jugadora agregada")};
+$("newPlayer").onkeydown=e=>{if(e.key==="Enter")$("addPlayer").click()};
+$("saveTournament").onclick=()=>{S.name=$("tName").value.trim()||"Pádel Girls";S.date=$("date").value;const n=Math.max(1,Math.min(20,parseInt($("numCourts").value)||1));S.courts=n;S.matches=S.matches.slice(0,n);persist();render();toast("💾 Guardado correctamente")};
+render();
+</script>
+</body></html>
